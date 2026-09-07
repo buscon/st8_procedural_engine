@@ -15,7 +15,16 @@ import torch
 
 
 def get_files(data_location, extension, **kwargs):
-    return list(pathlib.Path(data_location).rglob(f"*.{extension}"))
+    """Recursively find every file under data_location -- including any
+    subfolders, at any depth -- matching `extension`, case-insensitively
+    (so .wav and .WAV both match)."""
+    root = pathlib.Path(data_location)
+    ext = extension.lower().lstrip(".")
+    files = sorted(
+        f for f in root.rglob("*")
+        if f.is_file() and f.suffix.lower() == f".{ext}"
+    )
+    return files
 
 
 def load_multichannel(f, sampling_rate):
@@ -81,6 +90,13 @@ def run_preprocessing(config):
             f"no *.{config['data']['extension']} files found under "
             f"{config['data']['data_location']}"
         )
+
+    root = pathlib.Path(config["data"]["data_location"])
+    subfolders = sorted({f.parent.relative_to(root) for f in files})
+    print(f"found {len(files)} file(s) across {len(subfolders)} subfolder(s):")
+    for sub in subfolders:
+        n = sum(1 for f in files if f.parent.relative_to(root) == sub)
+        print(f"  {sub if str(sub) != '.' else '(root)'}  -- {n} file(s)")
 
     signals, f0s, rpms, torques = [], [], [], []
     for f in tqdm(files):
