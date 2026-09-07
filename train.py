@@ -70,10 +70,13 @@ def main():
 
     opt = torch.optim.Adam(model.parameters(), lr=args.start_lr)
 
-    def lr_at(epoch):
-        if epoch >= args.decay_over:
+    def lr_at(step):
+        # --decay_over is in units of training *steps* (matches --steps),
+        # not epochs -- with a few thousand batches per epoch, epoch count
+        # never gets anywhere near decay_over, so this must key off `step`.
+        if step >= args.decay_over:
             return args.stop_lr
-        t = epoch / args.decay_over
+        t = step / args.decay_over
         return args.start_lr * (1 - t) + args.stop_lr * t
 
     best_loss = float("inf")
@@ -81,10 +84,10 @@ def main():
     epochs = int(np.ceil(args.steps / len(dataloader)))
 
     for e in range(epochs):
-        for g in opt.param_groups:
-            g["lr"] = lr_at(e)
-
         for s, f0, rpm, torque in dataloader:
+            for g in opt.param_groups:
+                g["lr"] = lr_at(step)
+
             s = s.to(device)
             f0 = f0.unsqueeze(-1).to(device)
             rpm = rpm.unsqueeze(-1).to(device)
@@ -107,12 +110,12 @@ def main():
             opt.step()
 
             writer.add_scalar("loss", loss.item(), step)
+            writer.add_scalar("lr", lr_at(step), step)
             step += 1
             n_element += 1
             mean_loss += (loss.item() - mean_loss) / n_element
 
         if e % 10 == 0:
-            writer.add_scalar("lr", lr_at(e), e)
             writer.add_scalar("reverb_decay", model.reverb.decay.item(), e)
             writer.add_scalar("reverb_wet", model.reverb.wet.item(), e)
 
