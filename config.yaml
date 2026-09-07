@@ -1,0 +1,41 @@
+data:
+  data_location: /path/to/your/4channel/files   # EDIT ME
+  extension: "wav"                              # EDIT ME if not .wav
+
+preprocess:
+  sampling_rate: &samplingrate 48000   # EDIT ME: must match your files' real sample rate
+  signal_length: 96000                  # samples per training chunk (2s @ 48kHz here)
+  block_size: &blocksize 480            # control-rate hop -> 100 Hz control rate @ 48kHz
+  # signal_length must be an exact multiple of block_size.
+
+  oneshot: false
+  out_dir: ./preprocessed/
+
+  audio_channels: [0, 1]   # indices of the 2 audio channels -> averaged to mono
+  rpm_channel: 2           # index of the RPM channel
+  torque_channel: 3        # index of the torque channel
+
+  # RPM -> firing frequency: f0 = (rpm / 60) * (cylinders / strokes_per_cycle)
+  #   4-stroke engine: strokes_per_cycle = 2 (each cylinder fires once every 2 revs)
+  #   2-stroke engine: strokes_per_cycle = 1
+  cylinders: 4              # EDIT ME
+  strokes_per_cycle: 2      # EDIT ME
+
+  # Linear calibration, in case the recorded rpm/torque channels are raw
+  # sensor/ADC units rather than physical units already:
+  #   physical_value = raw_value * scale + offset
+  rpm_scale: 1.0
+  rpm_offset: 0.0
+  torque_scale: 1.0
+  torque_offset: 0.0
+
+model:
+  hidden_size: 512
+  n_harmonic: 100
+  n_bands: 65
+  sampling_rate: *samplingrate
+  block_size: *blocksize
+
+train:
+  scales: [4096, 2048, 1024, 512, 256, 128]
+  overlap: 0.75
