@@ -18,7 +18,7 @@ def get_files(data_location, extension, **kwargs):
     """Recursively find every file under data_location -- including any
     subfolders, at any depth -- matching `extension`, case-insensitively
     (so .wav and .WAV both match)."""
-    root = pathlib.Path(data_location)
+    root = pathlib.Path(data_location).expanduser().resolve()
     ext = extension.lower().lstrip(".")
     files = sorted(
         f for f in root.rglob("*")
@@ -91,7 +91,7 @@ def run_preprocessing(config):
             f"{config['data']['data_location']}"
         )
 
-    root = pathlib.Path(config["data"]["data_location"])
+    root = pathlib.Path(config["data"]["data_location"]).expanduser().resolve()
     subfolders = sorted({f.parent.relative_to(root) for f in files})
     print(f"found {len(files)} file(s) across {len(subfolders)} subfolder(s):")
     for sub in subfolders:
